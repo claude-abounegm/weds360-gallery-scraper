@@ -1,0 +1,35 @@
+{
+    "name": "gallery-scraper",
+    "version": "1.0.0",
+    "scripts": {
+        "start": "node ./src",
+        "pretty": "gulp pretty",
+        "test": "nyc --reporter=html --reporter=text mocha ./test/**/*.js",
+        "coverage": "nyc report --reporter=text-lcov | coveralls"
+    },
+    "author": {
+        "name": "Claude Abounegm",
+        "email": "claude.abounegm@gmail.com"
+    },
+    "license": "MIT",
+    "dependencies": {
+        "async": "^3.1.0",
+        "axios": "^0.19.1",
+        "fs-extra": "^8.1.0",
+        "lodash": "^4.17.15",
+        "puppeteer": "^2.0.0"
+    },
+    "devDependencies": {
+        "chai": "^4.2.0",
+        "eslint": "^6.1.0",
+        "eslint-config-prettier": "^6.0.0",
+        "eslint-plugin-prettier": "^3.1.0",
+        "gulp": "^4.0.2",
+        "gulp-prettier": "^2.1.0",
+        "gulp-tap": "^1.0.1",
+        "mocha": "^6.2.0",
+        "nodemon": "^1.19.1",
+        "nyc": "^15.0.0",
+        "prettier": "^1.18.2"
+    }
+}
