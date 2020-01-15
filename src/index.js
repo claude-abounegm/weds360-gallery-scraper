@@ -54,9 +54,14 @@ async function downloadAndSaveImage(url, opts) {
 
     console.log('Downloading image:', imgName);
 
-    const { data: imgBuffer } = await axios.get(url, {
-        responseType: 'arraybuffer'
+    const imgBuffer = await async.retry(3, async () => {
+        const { data: imgBuffer } = await axios.get(url, {
+            responseType: 'arraybuffer'
+        });
+
+        return imgBuffer;
     });
+
     await fs.mkdirp(localDirPath).catch(_.noop);
     await fs.writeFile(localFilePath, imgBuffer);
 
@@ -108,10 +113,10 @@ async function main() {
         return data;
     }
 
-    async function getImagesFromPageByCategory(
+    async function getImagesFromPageByCategory({
         categoryId,
         startPageNumber = 1
-    ) {
+    }) {
         const page = await newPage();
         await goTo(
             page,
@@ -135,7 +140,7 @@ async function main() {
 
                     console.log('ImageId:', imageId, 'with title:', title);
 
-                    return { _id: imageId, img, title };
+                    return { id: imageId, img, title };
                 }
             });
 
@@ -153,15 +158,15 @@ async function main() {
         await page.close();
 
         return async.mapLimit(allImages, 10, async image => {
-            const { _id, title, img: imgUrl } = image;
+            const { id, title, img: imgUrl } = image;
 
             const { imgFilePath } = await downloadAndSaveImage(imgUrl, {
                 title,
                 categoryId,
-                imageId: _id
+                imageId: id
             });
 
-            return { ...image, img: imgFilePath };
+            return { categoryId, ...image, img: imgFilePath };
         });
     }
 
@@ -187,7 +192,7 @@ async function main() {
                 });
 
                 return {
-                    _id: categoryId,
+                    id: categoryId,
                     title,
                     img: imgFilePath
                 };
@@ -200,21 +205,21 @@ async function main() {
     }
 
     try {
-        const categories = await async.map(
-            await getGalleryCategories(),
-            async category => {
-                const { _id: categoryId } = category;
-
-                const images = await getImagesFromPageByCategory(categoryId);
-
-                return {
-                    ...category,
-                    images
-                };
+        const categories = await getGalleryCategories();
+        const images = await async.map(
+            categories,
+            async ({ id: categoryId }) => {
+                return getImagesFromPageByCategory({
+                    categoryId,
+                    startPageNumber: 1
+                });
             }
         );
 
-        await fs.writeFile('output/db.json', JSON.stringify({ categories }));
+        await fs.writeFile(
+            'output/db.json',
+            JSON.stringify({ categories, images })
+        );
     } finally {
         await browser.close();
     }

@@ -59,5 +59,6 @@ module.exports = {
     getFiles,
     // map: util.promisify((arr, iterator) => async.mapLimit(arr, 1, iterator))
     map: util.promisify(async.map),
-    mapLimit: util.promisify(async.mapLimit)
+    mapLimit: util.promisify(async.mapLimit),
+    retry: util.promisify(async.retry)
 };
