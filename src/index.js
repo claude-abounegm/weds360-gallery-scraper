@@ -38,9 +38,15 @@ function escapeFileName(name) {
 }
 
 async function downloadAndSaveImage(url, opts) {
-    const imgName = `${escapeFileName(opts.title)}.png`;
+    const { title, categoryId, imageId } = opts;
 
-    const imgDirPath = `/category/${opts.categoryId}`;
+    let imgName = escapeFileName(title);
+    if (imageId) {
+        imgName = `${imgName}_${imageId}`;
+    }
+    imgName = `${imgName}.png`;
+
+    const imgDirPath = `/category/${categoryId}`;
     const imgFilePath = `${imgDirPath}/${imgName}`;
 
     const localDirPath = `output/${imgDirPath}`;
@@ -124,16 +130,16 @@ async function main() {
                 page,
                 selector: 'photos',
                 transformFn: async data => {
-                    const { title } = data;
-                    console.log('Image with title:', title);
+                    const { href, img, title } = data;
+                    const imageId = +/photos\/(\d+)/.exec(href)[1];
 
-                    return data;
+                    console.log('ImageId:', imageId, 'with title:', title);
+
+                    return { _id: imageId, img, title };
                 }
             });
 
-            for (const image of images) {
-                allImages.push({ _id: allImages.length, ...image });
-            }
+            allImages.push(...images);
 
             if (await page.$('.next.next_page.disabled a')) {
                 done = true;
@@ -146,15 +152,16 @@ async function main() {
 
         await page.close();
 
-        return async.mapLimit(allImages, 5, async image => {
+        return async.mapLimit(allImages, 10, async image => {
             const { _id, title, img: imgUrl } = image;
 
             const { imgFilePath } = await downloadAndSaveImage(imgUrl, {
                 title,
-                categoryId
+                categoryId,
+                imageId: _id
             });
 
-            return { _id, title, img: imgFilePath };
+            return { ...image, img: imgFilePath };
         });
     }
 
