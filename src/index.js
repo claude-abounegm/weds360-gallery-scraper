@@ -37,14 +37,20 @@ function escapeFileName(name) {
         .replace(/[^a-z0-9_]/g, '');
 }
 
+function generateFileName(title, id) {
+    let name = escapeFileName(title);
+    if (id) {
+        name = `${name}_${id}`;
+    }
+    name = `${name}.png`;
+
+    return name;
+}
+
 async function downloadAndSaveImage(url, opts) {
     const { title, categoryId, imageId } = opts;
 
-    let imgName = escapeFileName(title);
-    if (imageId) {
-        imgName = `${imgName}_${imageId}`;
-    }
-    imgName = `${imgName}.png`;
+    const imgName = generateFileName(title, imageId);
 
     const imgDirPath = `/category/${categoryId}`;
     const imgFilePath = `${imgDirPath}/${imgName}`;
@@ -79,9 +85,14 @@ async function downloadAndSaveImage(url, opts) {
 async function main() {
     const browser = await newBrowser();
 
-    async function newPage() {
+    async function newPage(url) {
         const page = await browser.newPage();
         await page.setViewport({ width: 1600, height: 900 });
+
+        if (url) {
+            await goTo(page, url);
+        }
+
         return page;
     }
 
@@ -117,9 +128,7 @@ async function main() {
         categoryId,
         startPageNumber = 1
     }) {
-        const page = await newPage();
-        await goTo(
-            page,
+        const page = await newPage(
             `https://weds360.com/en/photos?category=${categoryId}&page=${startPageNumber}`
         );
 
@@ -150,9 +159,8 @@ async function main() {
                 done = true;
             } else {
                 await clickAndWait(page, '.next.next_page a');
+                ++pageNumber;
             }
-
-            ++pageNumber;
         }
 
         await page.close();
@@ -165,15 +173,14 @@ async function main() {
                 categoryId,
                 imageId: id
             });
+            // const imgFilePath = imgUrl;
 
             return { categoryId, ...image, img: imgFilePath };
         });
     }
 
     async function getGalleryCategories() {
-        const page = await newPage();
-        await goTo(
-            page,
+        const page = await newPage(
             'https://weds360.com/en/categories?parent_menu=photos'
         );
 
@@ -190,6 +197,7 @@ async function main() {
                     title,
                     categoryId
                 });
+                // const imgFilePath = imgUrl;
 
                 return {
                     id: categoryId,
@@ -204,20 +212,56 @@ async function main() {
         return images;
     }
 
+    async function getImageDetails(imageId) {
+        const page = await newPage(`https://weds360.com/en/photos/${imageId}`);
+
+        try {
+            const photoDescription = await page.$('.photo--description');
+            const title = await photoDescription.$eval('h2', el =>
+                el.textContent.trim()
+            );
+            const description = await photoDescription.$eval('h5', el =>
+                el.textContent.trim()
+            );
+
+            const service = await photoDescription.$eval('h5 a', el => ({
+                href: el.href.trim(),
+                name: el.textContent.trim()
+            }));
+
+            return { id: imageId, title, description, service };
+        } finally {
+            await page.close();
+        }
+    }
+
     try {
         const categories = await getGalleryCategories();
         const images = await async.map(
             categories,
             async ({ id: categoryId }) => {
-                return getImagesFromPageByCategory({
+                let images = await getImagesFromPageByCategory({
                     categoryId,
                     startPageNumber: 1
                 });
+
+                images = await async.map(images, async image => {
+                    const imageDetails = await getImageDetails(image.id);
+
+                    return {
+                        ...image,
+                        ...imageDetails
+                    };
+                });
+
+                return images;
             }
         );
 
+        const basePath = './output';
+        await fs.mkdirp(basePath).catch(_.noop);
         await fs.writeFile(
-            'output/db.json',
+            `${basePath}/db.json`,
             JSON.stringify({ categories, images: _.flatten(images) })
         );
     } finally {
