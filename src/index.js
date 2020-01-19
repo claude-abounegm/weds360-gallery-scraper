@@ -58,20 +58,20 @@ async function downloadAndSaveImage(url, opts) {
     const localDirPath = `output/${imgDirPath}`;
     const localFilePath = `output/${imgFilePath}`;
 
-    console.log('Downloading image:', imgName);
+    // console.log('Downloading image:', imgName);
 
-    const imgBuffer = await async.retry(3, async () => {
-        const { data: imgBuffer } = await axios.get(url, {
-            responseType: 'arraybuffer'
-        });
+    // const imgBuffer = await async.retry(3, async () => {
+    //     const { data: imgBuffer } = await axios.get(url, {
+    //         responseType: 'arraybuffer'
+    //     });
 
-        return imgBuffer;
-    });
+    //     return imgBuffer;
+    // });
 
-    await fs.mkdirp(localDirPath).catch(_.noop);
-    await fs.writeFile(localFilePath, imgBuffer);
+    // await fs.mkdirp(localDirPath).catch(_.noop);
+    // await fs.writeFile(localFilePath, imgBuffer);
 
-    console.log('Saved image:', imgName);
+    // console.log('Saved image:', imgName);
 
     return {
         imgName,
@@ -148,8 +148,17 @@ async function main() {
                     const imageId = +/photos\/(\d+)/.exec(href)[1];
 
                     console.log('ImageId:', imageId, 'with title:', title);
+                    const imageDetails = await async.retry(3, async () => {
+                        return await getImageDetails(imageId);
+                    });
+                    console.log('Done fetching image details', imageId);
 
-                    return { id: imageId, img, title };
+                    return {
+                        id: imageId,
+                        img,
+                        title,
+                        ...imageDetails
+                    };
                 }
             });
 
@@ -240,21 +249,10 @@ async function main() {
         const images = await async.map(
             categories,
             async ({ id: categoryId }) => {
-                let images = await getImagesFromPageByCategory({
+                return await getImagesFromPageByCategory({
                     categoryId,
                     startPageNumber: 1
                 });
-
-                images = await async.map(images, async image => {
-                    const imageDetails = await getImageDetails(image.id);
-
-                    return {
-                        ...image,
-                        ...imageDetails
-                    };
-                });
-
-                return images;
             }
         );
 
