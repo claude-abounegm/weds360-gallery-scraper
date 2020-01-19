@@ -218,7 +218,7 @@ async function main() {
 
         await fs.writeFile(
             'output/db.json',
-            JSON.stringify({ categories, images })
+            JSON.stringify({ categories, images: _.flatten(images) })
         );
     } finally {
         await browser.close();
