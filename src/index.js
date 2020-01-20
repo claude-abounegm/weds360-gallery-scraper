@@ -3,30 +3,12 @@
 const _ = require('lodash');
 const fs = require('fs-extra');
 const axios = require('axios').default;
-const { async, puppeteer } = require('./utils');
-
-function escapeFileName(name) {
-    return name
-        .trim()
-        .toLowerCase()
-        .replace(/ /g, '_')
-        .replace(/[^a-z0-9_]/g, '');
-}
-
-function generateFileName(title, id) {
-    let name = escapeFileName(title);
-    if (id) {
-        name = `${name}_${id}`;
-    }
-    name = `${name}.png`;
-
-    return name;
-}
+const { async, puppeteer, files } = require('./utils');
 
 async function downloadAndSaveImage(url, opts) {
     const { title, categoryId, imageId } = opts;
 
-    const imgName = generateFileName(title, imageId);
+    const imgName = files.generatePngFileName(title, imageId);
 
     const imgDirPath = `/category/${categoryId}`;
     const imgFilePath = `${imgDirPath}/${imgName}`;
