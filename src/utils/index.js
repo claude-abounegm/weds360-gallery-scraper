@@ -1,5 +1,6 @@
 'use strict';
 
 module.exports = {
-    async: require('./async')
+    async: require('./async'),
+    puppeteer: require('./puppeteer')
 };
