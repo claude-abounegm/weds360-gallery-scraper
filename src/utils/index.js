@@ -2,5 +2,6 @@
 
 module.exports = {
     async: require('./async'),
-    puppeteer: require('./puppeteer')
+    puppeteer: require('./puppeteer'),
+    files: require('./files')
 };
